@@ -1,0 +1,21 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gh-argo-application
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/atrakic/argocd-local-dev.git
+    targetRevision: HEAD
+    path: apps/json-server
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: json-server
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      selfHeal: true
+      prune: true
