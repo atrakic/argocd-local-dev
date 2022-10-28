@@ -7,6 +7,7 @@ on:
 
 jobs:
   # https://github.com/actions/runner
+  # https://github.com/atrakic/argocd-local-dev/settings/actions/runners/new
   self-hosted-run:
     runs-on: self-hosted
 
@@ -19,18 +20,13 @@ jobs:
 
       - name: Setup argocd and patch it
         run: |
-          .github/self-hosted/install-argo.sh
-
-      - name: Port forward argcd UI
-        run: |
-          killall kubectl || kubectl port-forward svc/argocd-server 8080:443 -n argocd &
-
+          .github/self-hosted/install-argocd.sh
+      
       - name: Wait for cluster to finish bootstraping
         run: kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
 
-      - name: Print Arcd setup
-        id: argo-setup
+      - name: Install example application
         run: |
-          echo "::set-output name=URL::'http://localhost:8080'"
-          echo "::set-output name=LOGIN::'admin'"
-          echo "::set-output name=PASSWORD::$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
+          kubectl apply -f ./applications/json-server/application.yaml
+
+# TODO: use argocd commands to sync
