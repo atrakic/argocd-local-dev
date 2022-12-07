@@ -34,19 +34,32 @@ nodes:
 EOF
 }
 
+install_nginx_kind() {
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+	kubectl wait --namespace ingress-nginx \
+		--for=condition=ready pod \
+		--selector=app.kubernetes.io/component=controller \
+		--timeout=90s
+}
+
 register_registry() {
 cat <<EOF | kubectl apply --server-side -f-
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: local-registry-hosting
+  name: argocd-image-updater-config
   namespace: kube-public
 data:
-  localRegistryHosting.v1: |
-    host: "localhost:${reg_port}"
-    hostFromContainerRuntime: "${reg_name}:${reg_internal_port}"
-    hostFromClusterNetwork: "${reg_name}:${reg_internal_port}"
-    help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
+  registries.conf: |
+    - name: Local Hub
+      api_url: "localhost:${reg_port}"
+      prefix: localhost
+      insecure: yes
+      default: true
+      credentials: env:REGISTRY_SECRET
+      #hostFromContainerRuntime: "${reg_name}:${reg_internal_port}"
+      #hostFromClusterNetwork: "${reg_name}:${reg_internal_port}"
+      #help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
 EOF
 }
 
@@ -60,6 +73,7 @@ fi
 # Create a cluster with the local registry enabled
 if [ "$(kind get clusters | grep ${cluster_name})" != "${cluster_name}" ]; then
   install_cluster
+  install_nginx_kind
   register_registry
 fi
 
