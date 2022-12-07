@@ -24,12 +24,12 @@ check: ## Check if the NGINX ingress self-signed TLS works
 	curl --insecure https://podinfo.flux.local
 
 .PHONY: tools
-tools: ## Install Kubernetes kind, kubectl, FLux CLI and other tools with Homebrew
+tools: ## Install Kubernetes kind, kubectl, Argo CLI and other tools with Homebrew
 	brew bundle
 
-#.PHONY: validate
-#validate: ## Validate the Kubernetes manifests (including Flux custom resources)
-#	scripts/test/validate.sh
+.PHONY: validate
+validate: ## Validate the Kubernetes manifests
+	scripts/test/validate.sh
 
 .PHONY: cluster-up
 cluster-up:
