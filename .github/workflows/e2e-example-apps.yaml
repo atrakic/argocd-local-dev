@@ -14,6 +14,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Install ArgoCD CLI
+        run: |
+          brew install argocd
+
       - name: KinD
         uses: helm/kind-action@v1.4.0
         with:
@@ -35,10 +42,6 @@ jobs:
       - name: Install ArgoCD
         run: |
           .github/self-hosted/install-argocd.sh
-
-      - name: Install ArgoCD CLI
-        run: |
-          brew install argocd
 
       - name: Test ArgoCD login
         run: |
