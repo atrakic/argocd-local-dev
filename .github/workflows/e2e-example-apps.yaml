@@ -1,0 +1,64 @@
+name: e2e-example-apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ '*' ]
+    tags-ignore: [ '*' ]
+
+jobs:
+  kind-e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: KinD
+        uses: helm/kind-action@v1.4.0
+        with:
+          config: config/kind.yaml
+
+      - name: Wait for cluster
+        run: |
+          kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+          kubectl cluster-info
+
+      - name: Install Ingress-Nginx for kinD
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=90s
+
+      - name: Install ArgoCD
+        run: |
+          .github/self-hosted/install-argocd.sh
+
+      - name: Install ArgoCD CLI
+        run: |
+          brew install argocd
+
+      - name: Test ArgoCD login
+        run: |
+          PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo)
+          echo $PASS
+          argocd login 127.0.0.1 -H "Host: argocd.mydomain.com"  --plaintext --username admin --password "$PASS" --insecure
+
+      - name: Create ArgoCD example deployment
+        run: ./tests/test.sh
+
+      - name: Check if working tree is dirty
+        run: |
+          if [[ $(git diff --stat) != '' ]]; then
+            git diff
+            echo 'run make test and commit changes'
+            exit 1
+          fi
+
+      - name: Debug failure
+        if: failure()
+        run: |
+          kubectl get all -A
+          kubectl get events --sort-by='.metadata.creationTimestamp' -A
