@@ -1,4 +1,4 @@
-name: e2e-example-apps
+name: e2e
 
 on:
   workflow_dispatch:
