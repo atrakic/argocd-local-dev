@@ -14,6 +14,7 @@ argocd --server 127.0.0.1:8080 --insecure \
   --dest-server https://kubernetes.default.svc \
   --upsert
 #  --dest-namespace "$NS" \
-#  --helm-set replicaCount=2
 
-argocd --server 127.0.0.1:8080 app sync "$APP" #argocd --server 127.0.0.1 -H "Host: argocd.mydomain.com" --plaintext --insecure app sync "$APP"
+argocd --server 127.0.0.1:8080 app sync "$APP"
+
+curl -i -f -L -skX GET 127.0.0.1:80 -H"Host: json-server.local"
