@@ -9,7 +9,7 @@ on:
 jobs:
   kind-e2e:
     runs-on: ubuntu-latest
-
+    if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -32,25 +32,10 @@ jobs:
           kubectl cluster-info
 
       - name: Install Ingress-Nginx for kinD
-        run: |
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-          kubectl wait --namespace ingress-nginx \
-            --for=condition=ready pod \
-            --selector=app.kubernetes.io/component=controller \
-            --timeout=90s
+        run: make all
 
-      - name: Install ArgoCD
-        run: |
-          .github/self-hosted/install-argocd.sh
-
-      - name: Test ArgoCD login
-        run: |
-          PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo)
-          echo $PASS
-          argocd login 127.0.0.1 -H "Host: argocd.mydomain.com"  --plaintext --username admin --password "$PASS" --insecure
-
-      - name: Create ArgoCD example deployment
-        run: ./tests/test.sh
+      - name: Test ArgoCD deployment
+        run: make test
 
       - name: Check if working tree is dirty
         run: |

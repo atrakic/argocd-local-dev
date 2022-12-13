@@ -10,7 +10,6 @@ jobs:
   # https://github.com/atrakic/argocd-local-dev/settings/actions/runners/new
   self-hosted-run:
     runs-on: self-hosted
-    if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
       - uses: actions/checkout@v2
 
