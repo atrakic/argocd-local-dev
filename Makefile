@@ -4,10 +4,12 @@ MAKEFLAGS += --silent
 
 APP := json-server
 
-all: kind load_image port_forward test status ## Do all
+all: kind setup load_image port_forward test status ## Do all
 
 kind: ## kinD
 	kind create cluster --config config/kind.yaml --wait 60s || true
+
+setup:
 	scripts/ingress/up.sh
 	scripts/argocd/up.sh
 

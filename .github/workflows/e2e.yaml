@@ -31,11 +31,21 @@ jobs:
           kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
           kubectl cluster-info
 
-      - name: Install Ingress-Nginx for kinD
-        run: make all
+      - name: Setup
+        run: |
+          make setup
+          make load_image
+          make port_forward
+
+      - name: ensure port forward works
+        run: |
+          curl -kL -i 127.0.0.1:8080
 
       - name: Test ArgoCD deployment
         run: make test
+
+      - name: get status
+        run: make status
 
       - name: Check if working tree is dirty
         run: |
