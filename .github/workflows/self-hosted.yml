@@ -26,6 +26,6 @@ jobs:
 
       - name: Install example application
         run: |
-          kubectl apply -f ./applications/json-server/application.yaml
+          kubectl apply -f ./config/applications/json-server/application.yaml
 
 # TODO: use argocd commands to sync

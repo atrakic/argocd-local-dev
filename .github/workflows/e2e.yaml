@@ -36,20 +36,21 @@ jobs:
       - name: Setup
         run: |
           make setup
-          make load_image
           make port_forward
 
-      - name: ensure port forward works
-        run: |
-          curl -kL -i 127.0.0.1:8080
+      - name: Ensure port forward works
+        run: curl -ifkL 127.0.0.1:8080
 
       - name: Test ArgoCD deployment
-        run: make test
+        run: |
+          make load_image
+          make test
 
-      - name: get status
+      - name: Get ArgoCD status
         run: make status
 
       - name: Check if working tree is dirty
+        #if: always()
         run: |
           if [[ $(git diff --stat) != '' ]]; then
             git diff
