@@ -39,7 +39,7 @@ jobs:
           make port_forward
 
       - name: Ensure port forward works
-        run: curl -ifkL 127.0.0.1:8080
+        run: curl -fiskL 127.0.0.1:8080
 
       - name: Test ArgoCD deployment
         run: |
