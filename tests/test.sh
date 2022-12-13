@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 set -o errexit
+set -o nounset
+set -o pipefail
 
-APP=helm-guestbook
+APP=json-server
 
-argocd --server 127.0.0.1 -H "Host: argocd.mydomain.com" --plaintext --insecure \
+#argocd --core --server 127.0.0.1 -H "Host: argocd.mydomain.com" --plaintext --insecure \
+argocd --server 127.0.0.1:8080 --insecure \
   app create "$APP" \
-  --repo https://github.com/argoproj/argocd-example-apps.git \
-  --path helm-guestbook \
-  --dest-namespace default \
+  --repo https://github.com/atrakic/argocd-local-dev.git \
+  --path apps/json-server \
+  --revision $(git branch --show-current) \
   --dest-server https://kubernetes.default.svc \
-  --helm-set replicaCount=2
+  --upsert
+#  --dest-namespace "$NS" \
+#  --helm-set replicaCount=2
 
-argocd --server 127.0.0.1 -H "Host: argocd.mydomain.com" --plaintext --insecure app sync "$APP"
-
-kubectl wait --for=condition=Ready pods --all -n default --timeout=300s
+argocd --server 127.0.0.1:8080 app sync "$APP" #argocd --server 127.0.0.1 -H "Host: argocd.mydomain.com" --plaintext --insecure app sync "$APP"

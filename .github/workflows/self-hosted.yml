@@ -10,7 +10,7 @@ jobs:
   # https://github.com/atrakic/argocd-local-dev/settings/actions/runners/new
   self-hosted-run:
     runs-on: self-hosted
-
+    if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
       - uses: actions/checkout@v2
 
@@ -21,7 +21,7 @@ jobs:
       - name: Setup argocd and patch it
         run: |
           .github/self-hosted/install-argocd.sh
-      
+
       - name: Wait for cluster to finish bootstraping
         run: kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
 
