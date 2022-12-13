@@ -16,7 +16,7 @@ kubectl wait --for=condition=available deployment argocd-dex-server -n "$NS" --t
 kubectl -n "$NS" patch deployment argocd-server --type json \
   -p='[ { "op": "replace", "path":"/spec/template/spec/containers/0/command","value": ["argocd-server","--staticassets","/shared/app","--insecure"] }]'
 
-# enable ingress:
+# enable plain ingress (no TLS):
 cat <<EOF | kubectl -n "$NS" apply -f -
 ---
 apiVersion: networking.k8s.io/v1

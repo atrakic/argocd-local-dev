@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: json-server
   labels:
-    app: json-server-svc    
+    app: json-server
 spec:
   clusterIP: None
   ports:
@@ -13,5 +13,5 @@ spec:
     protocol: TCP
     targetPort: 8000
   selector:
-    app: json-server-app
+    app: json-server
   type: ClusterIP

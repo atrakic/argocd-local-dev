@@ -3,22 +3,22 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: json-server-app
-  name: json-server-app
+    app: json-server
+  name: json-server
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: json-server-app
+      app: json-server
   strategy: {}
   template:
     metadata:
       labels:
-        app: json-server-app
+        app: json-server
     spec:
       containers:
         - image: adtrdr/json-server-app:latest
           imagePullPolicy: Always
-          name: json-server-app
+          name: json-server
           ports:
             - containerPort: 8080
