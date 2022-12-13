@@ -31,6 +31,7 @@ jobs:
         run: |
           kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
           kubectl cluster-info
+          kind get clusters
 
       - name: Setup
         run: |
