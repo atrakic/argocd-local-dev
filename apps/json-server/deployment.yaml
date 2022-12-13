@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - image: adtrdr/json-server-app:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           name: json-server
           ports:
             - containerPort: 8080
