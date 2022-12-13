@@ -1,0 +1,122 @@
+# Creates a new PR with deployment patch using *strategic merge patch strategy*.
+name: deployment-patch
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Deployment name'
+        required: true
+      app_port:
+        description: 'Port number, eg: 80'
+        required: true
+        default: '80'
+      tag:
+        description: 'Image tag to use, eg: 1.4'
+        default: 'latest'
+        required: true
+      image:
+        description: 'Image to use, eg: docker.io/nginx'
+        default: 'docker.io/nginx'
+        required: true
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    outputs: # declare what this job outputs (so it can be re-used for other jobs)
+      PORT: ${{ github.event.inputs.app_port }}
+      APP: ${{ github.event.inputs.app_name }}
+      TAG: ${{ github.event.inputs.tag }}
+      IMAGE: ${{ github.event.inputs.image }}
+    env:
+      cluster-name: "ci-cluster"
+      timeout: "120s"
+      ns: 'ci'
+    steps:
+      - name: Wrap Input
+        run: |
+          echo "PORT=${{ github.event.inputs.app_port }}" >> $GITHUB_ENV
+          echo "APP=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+          echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          echo "IMAGE=${{ github.event.inputs.image }}" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
+      - name: KinD
+        uses: helm/kind-action@v1.4.0
+        with:
+          config: config/kind.yaml
+
+      - name: Wait for cluster
+        run: |
+          kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+          kubectl cluster-info
+
+      - name: Install new deployment under test
+        run: |
+          kubectl create ns ${{ env.ns }}
+          kubectl create deployment "${{ env.APP }}" \
+            --image "${{ env.IMAGE }}:${{ env.TAG }}" \
+            --port "${{ env.PORT }}" \
+            --dry-run=client -o yaml | kubectl apply -n ${{ env.ns }} -f -
+      - name: Test all pods are ready
+        run: |
+           kubectl wait --for=condition=Ready pods --all -n ${{ env.ns }} --timeout=${{ env.timeout }}
+
+  create-pr:
+    runs-on: ubuntu-latest
+    if: needs.ci.result == 'success'
+    needs: ci
+    env:
+      PORT: ${{ needs.ci.outputs.PORT }}
+      APP: ${{ needs.ci.outputs.APP }}
+      TAG: ${{ needs.ci.outputs.TAG }}
+      IMAGE: ${{ needs.ci.outputs.IMAGE }}
+    steps:
+      - name: Wrap Input
+        run: |
+          echo "ARGO_APPLICATIONS_FILE_DIR=applications/${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+          echo "DEPLOY_FILE_DIR=apps/${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
+      - name: Generate deployment manifest
+        run: |
+          if [[ ! -f "${{ env.DEPLOY_FILE_PATH }}" ]]; then
+               mkdir -p "${{ env.DEPLOY_FILE_DIR }}" "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
+               .github/gen-argo-applications.sh "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml" \
+                "${{ env.APP }}-application" \
+                "https://github.com/${{ env.GITHUB_REPOSITORY }}.git" \
+                "${{ env.ARGO_APPLICATIONS_FILE_DIR }}" \
+                "${{ env.APP }}"
+               git add "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml"
+               kubectl create deployment "${{ env.APP }}" \
+                --image "${{ env.IMAGE }}:${{ env.TAG }}" \
+                --port "${{ env.PORT }}" \
+                --dry-run=client -o yaml|grep -v status > "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+               git add "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+               kubectl create service clusterip "${{ env.APP }}-svc" --tcp="${{ env.PORT }}":"${{ env.PORT }}" --dry-run=client -o yaml > "${{ env.DEPLOY_FILE_DIR }}/service.yaml"
+               git add "${{ env.DEPLOY_FILE_DIR }}/service.yaml"
+               echo "::set-output create-new=true"
+          else
+            # strategic patch merge:
+            kubectl patch --type merge \
+              --filename=${{ env.DEPLOY_FILE_PATH }} \
+              --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}:${{ env.TAG }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
+              --local=true \
+              --dry-run=client -o yaml "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+            git add "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+            echo "::set-output create-new=false"
+          fi
+      - name: Commit change
+        run: |
+            git config user.name ${{ github.actor }}
+            git config user.email '${{ github.actor }}@users.noreply.github.com'
+            git diff-index --quiet HEAD || git commit -m "Set: ${{ env.APP }} to version: ${{ env.TAG }}"
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Update deployment
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          signoff: false
+          branch: new_release_${{ env.APP }}-${{ env.TAG }}
+          title: 'Set: ${{ env.APP }} to version: ${{ env.IMAGE }}:${{ env.TAG }}'
+          body: |
+            This PR was automatically created by ${{ github.workflow }}.
+            Please review and merge to deploy on ${{ env.IMAGE }}.
