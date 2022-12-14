@@ -50,7 +50,7 @@ jobs:
         run: make status
 
       - name: Check if working tree is dirty
-        #if: always()
+        if: always()
         run: |
           if [[ $(git diff --stat) != '' ]]; then
             git diff
