@@ -17,4 +17,4 @@ argocd --server 127.0.0.1:8080 --insecure \
   --upsert
 
 argocd --server 127.0.0.1:8080 app sync "$APP"
-sleep 3
+argocd --server 127.0.0.1:8080 app wait "$APP"
