@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [ '*' ]
+    paths-ignore:
+      - '**/docs'
+      - '**/README.md'
     tags-ignore: [ '*' ]
 
 jobs:
@@ -17,9 +20,8 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
-      - name: Install ArgoCD CLI
-        run: |
-          brew install argocd
+      - name: Install tools
+        run: brew bundle
 
       - name: KinD
         uses: helm/kind-action@v1.4.0
@@ -38,7 +40,7 @@ jobs:
           make setup
           make port_forward
 
-      - name: Ensure port forward works
+      - name: Ensure port forward
         run: curl -fiskL 127.0.0.1:8080
 
       - name: Test ArgoCD deployment
@@ -61,5 +63,5 @@ jobs:
       - name: Debug failure
         if: failure()
         run: |
-          kubectl get all -A
+          kubectl get all,cm,sa -A
           kubectl get events --sort-by='.metadata.creationTimestamp' -A
