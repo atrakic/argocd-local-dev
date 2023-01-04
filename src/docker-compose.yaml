@@ -1,5 +1,7 @@
 services:
   app:
     build: .
+    container_name: json-server
+    image: local/json-server
     ports:
       - 8000:8000
